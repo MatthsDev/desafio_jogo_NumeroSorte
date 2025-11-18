@@ -1,24 +1,20 @@
 package br.com.projeto.models;
 
-/**
- * Representa um bilhete com uma numeração única (0 - 9999).
- * É uma classe simples de domínio, seguindo o padrão POJO.
- */
+import java.util.Objects;
 
+/**
+ * Entidade Bilhete: representa um bilhete com numeração entre 0 e 9999.
+ * Mantemos encapsulamento e implemetamos equals/hashCode para permitir comparações corretas.
+ */
 public class Bilhete {
 
-    // Número do bilhete (sempre inteiro entre 0000 e 9999)
-    private int numeracao;
+    // Mantemos o campo como final quando possível para evitar mutabilidade desnecessária.
+    private final int numeracao;
 
     /**
-     * Construtor padrão.
-     * Mantemos um construtor vazio por simplicidade
-     * caso o bilhete seja preenchido depois.
-     */
-    public Bilhete() {}
-
-    /**
-     * Construtor alternativo: permite criar já com um número.
+     * Construtor principal.
+     *
+     * @param numeracao numero do bilhete (0..9999)
      */
     public Bilhete(int numeracao) {
         this.numeracao = numeracao;
@@ -28,24 +24,29 @@ public class Bilhete {
         return numeracao;
     }
 
-    public void setNumeracao(int numeracao) {
-        this.numeracao = numeracao;
-    }
-
     /**
-     * Retorna o número formatado no padrão de bilhetes:
-     * - Sempre 4 dígitos
-     * - Exemplo: 7 → "0007"
+     * Retorna o número formatado com 4 dígitos (ex: 7 -> "0007")
      */
     public String getNumeroFormatado() {
         return String.format("%04d", numeracao);
     }
 
-    /**
-     * Sobrescrita padrão: permite imprimir Bilhete diretamente.
-     */
     @Override
     public String toString() {
         return "Bilhete nº " + getNumeroFormatado();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Bilhete bilhete = (Bilhete) o;
+        return numeracao == bilhete.numeracao;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(numeracao);
     }
 }

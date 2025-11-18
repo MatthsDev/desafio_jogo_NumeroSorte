@@ -1,88 +1,106 @@
 package br.com.projeto.controller;
 
 import br.com.projeto.models.Bilhete;
+import br.com.projeto.services.BilheteService;
+import br.com.projeto.services.SorteioService;
 import br.com.projeto.view.Menu;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-
+/**
+ * Controller principal: orquestra a aplicação.
+ * Não contém lógica de geração nem de sorteio: delega para serviços especializados.
+ */
 public class AppController {
 
     private final Scanner scanner = new Scanner(System.in);
+    private final BilheteService bilheteService;
+    private final SorteioService sorteioService;
 
-    // Lista principal com todos os bilhetes gerados
-    private final List<Bilhete> bilhetes = new ArrayList<>();
+    // Injeção de dependências via construtor — facilita testes e substituições.
+    public AppController(BilheteService bilheteService, SorteioService sorteioService) {
+        this.bilheteService = bilheteService;
+        this.sorteioService = sorteioService;
+    }
 
+    /**
+     * Loop principal da aplicação.
+     */
     public void iniciar() {
         int opcao;
 
         do {
-            Menu.exibirMenu();
+            Menu.exibirMenuPrincipal();
             opcao = Menu.lerOpcao(scanner);
 
             switch (opcao) {
-                case 1 -> gerarBilhetes();
-                case 2 -> listarBilhetes();
-                case 3 -> sortearBilhete();
+                case 1 -> executarGerarBilhetes();
+                case 2 -> executarListarBilhetes();
+                case 3 -> executarSorteio();
                 case 0 -> System.out.println("\nEncerrando o programa... Até a próxima! 👋");
-                default -> System.out.println("Opção inválida.\n");
+                default -> System.out.println("\nOpção inválida.\n");
             }
 
         } while (opcao != 0);
     }
 
-    /**
-     * Gera X bilhetes e armazena na lista.
-     */
-    private void gerarBilhetes() {
-        System.out.print("\nQuantos bilhetes deseja gerar? → ");
-        int quantidade = Menu.lerOpcao(scanner);
+    // -------------------------
+    // Operações orquestradas
+    // -------------------------
 
-        for (int i = 0; i < quantidade; i++) {
-            Bilhete bilhete = GeradorDeBilhete.gerarBilhete();
-            bilhetes.add(bilhete);
-            GeradorDeBilhete.exibirBilhete(bilhete);
-        }
+    private void executarGerarBilhetes() {
+        int quantidade = Menu.solicitarQuantidadeBilhetes(scanner);
 
-        System.out.println("\n✔ Bilhetes gerados com sucesso!\n");
-    }
-
-    /**
-     * Lista todos os bilhetes gerados.
-     */
-    private void listarBilhetes() {
-        if (bilhetes.isEmpty()) {
-            System.out.println("\n❌ Nenhum bilhete gerado ainda.\n");
+        if (quantidade <= 0) {
+            System.out.println("\nQuantidade deve ser maior que 0.\n");
             return;
         }
 
-        System.out.println("\n--- LISTA DE BILHETES ---");
-        bilhetes.forEach(b -> System.out.println("🎟️ " + b.getNumeroFormatado()));
+        List<Bilhete> gerados = bilheteService.gerarMultiplosBilhetes(quantidade);
         System.out.println();
+        gerados.forEach(b -> System.out.println("🎟️ " + b.getNumeroFormatado()));
+        System.out.println("\n✔ Foram gerados " + gerados.size() + " bilhete(s).\n");
+
+        Menu.pressionarEnterParaContinuar(scanner);
     }
 
-    /**
-     * Gera um bilhete vencedor aleatório e verifica se alguém tem ele.
-     */
-    private void sortearBilhete() {
-        if (bilhetes.isEmpty()) {
-            System.out.println("\n❌ Não é possível sortear sem bilhetes gerados.\n");
+    private void executarListarBilhetes() {
+        List<Bilhete> lista = bilheteService.listarBilhetes();
+        if (lista.isEmpty()) {
+            System.out.println("\n❌ Nenhum bilhete gerado ainda.\n");
+        } else {
+            System.out.println("\n--- SEUS BILHETES ---");
+            lista.forEach(b -> System.out.println("🎟️ " + b.getNumeroFormatado()));
+            System.out.println();
+        }
+        Menu.pressionarEnterParaContinuar(scanner);
+    }
+
+    private void executarSorteio() {
+        List<Bilhete> lista = bilheteService.listarBilhetes();
+        if (lista.isEmpty()) {
+            System.out.println("\n❌ Gere bilhetes antes de realizar o sorteio.\n");
+            Menu.pressionarEnterParaContinuar(scanner);
             return;
         }
 
-        Bilhete vencedor = GeradorDeBilhete.gerarBilhete();
+        // Sorteia um bilhete (número) e verifica se está entre os bilhetes do usuário
+        Bilhete vencedor = sorteioService.sortearBilhete();
 
-        System.out.println("\n🏆 BILHETE PREMIDO → " + vencedor.getNumeroFormatado());
+        System.out.println("\n================= RESULTADO DO SORTEIO =================");
+        System.out.println("🎯 Número sorteado: " + vencedor.getNumeroFormatado());
 
-        boolean ganhou = bilhetes.stream()
-                .anyMatch(b -> b.getNumeracao() == vencedor.getNumeracao());
-
+        boolean ganhou = bilheteService.existeNumero(vencedor.getNumeracao());
         if (ganhou) {
-            System.out.println("\n🎉 PARABÉNS! Você tem o bilhete premiado!\n");
+            System.out.println("\n🎉 PARABÉNS! Você tem um bilhete premiado!");
         } else {
-            System.out.println("\n😢 Não foi dessa vez... Tente novamente!\n");
+            System.out.println("\n😢 Não foi dessa vez... mais sorte na próxima!");
+            System.out.println("\nBilhete premiado: " + vencedor.getNumeroFormatado());
         }
+
+        System.out.println("=======================================================\n");
+
+        Menu.pressionarEnterParaContinuar(scanner);
     }
 }
